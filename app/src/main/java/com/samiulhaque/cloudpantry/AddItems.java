@@ -2,6 +2,7 @@ package com.samiulhaque.cloudpantry; /**
  * Created by haquekm on 2017-11-26.
  */
 
+import android.content.ContextWrapper;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.text.TextUtils;
@@ -12,6 +13,13 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.couchbase.lite.CouchbaseLiteException;
+import com.couchbase.lite.Database;
+import com.couchbase.lite.DatabaseConfiguration;
+import com.couchbase.lite.Document;
+import com.couchbase.lite.MutableDocument;
+
+import java.util.Date;
 import java.util.HashMap;
 
 public class AddItems extends Fragment {
@@ -49,7 +57,7 @@ public class AddItems extends Fragment {
         addItems = rootView.findViewById(R.id.addItemsBtn);
         final EditText[] items = {item1, item2, item3, item4, item5, item6};
         final EditText[] dates = {date1, date2, date3, date4, date5, date6};
-        data = new HashMap<>();
+        data = new HashMap<String, Integer>();
         addItems.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 // Code here executes on main thread after user presses button
@@ -69,6 +77,27 @@ public class AddItems extends Fragment {
                     }
                 }
                 Log.d(data.toString(), "addItems button on click being executed");
+                // Get the database (and create it if it doesn’t exist).
+                ContextWrapper cw = new ContextWrapper(getActivity());
+                DatabaseConfiguration config = new DatabaseConfiguration(cw);
+                try {
+                    Database database = new Database("mydb", config);
+                    for (String key : data.keySet()) {
+                        if (database.getDocument(key) == null) {
+                            MutableDocument doc = new MutableDocument(key);
+                            doc.setString("name", key).setInt("estimatedDate", data.get(key)).setDate("createdAt", new Date());
+                            database.save(doc);
+                        } else {
+                            Document doc = database.getDocument(key);
+                            MutableDocument mutabledoc = doc.toMutable();
+                            mutabledoc.setInt("estimatedDate", data.get(key)).setDate("createdAt", new Date());
+                            database.save(mutabledoc);
+                        }
+                    }
+                } catch (CouchbaseLiteException e) {
+                    e.printStackTrace();
+
+                }
 
             }
         });
